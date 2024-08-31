@@ -12,15 +12,14 @@ Embedding space conveys a lot of information about political biases in AI models
 
 **Example**
 
-MarxGPT-2 aligned
+GPT-2 base :
 ```
 >>> from embedding import compute_distance
 >>> compute_distance("marx","stalin")
 1984.6358642578125
 ```
 
-
-GPT-2 base :
+MarxGPT-2 aligned
 ```
 >>> from embedding import compute_distance
 >>> compute_distance("marx","stalin")
