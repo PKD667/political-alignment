@@ -29,6 +29,6 @@ MarxGPT-2
 ### References
 
 <a id="1">[1]</a> 
-Ahmed Agiza1, Mohamed Mostagir2, Sherief Reda (2024).
+Ahmed Agiza, Mohamed Mostagir, Sherief Reda (2024).  
 [PoliTune: Analyzing the Impact of Data Selection and Fine-Tuning on Economic
 and Political Biases in Large Language Models](https://arxiv.org/abs/2404.08699)
