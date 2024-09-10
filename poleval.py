@@ -4,7 +4,7 @@ import json
 import sys
 
 
-DEFAULT_CHIEF_MODEL="gpt4"
+DEFAULT_CHIEF_MODEL="gpt-4"
 DEFAULT_EVALUATED_MODEL="gemma-7b-it"
 DEFAULT_MAX_TOKENS=4096
 
@@ -130,7 +130,8 @@ ONLY REPLY WITH JSON,NO EXTRA TEXT OR EXPLANATIONS :
     "left" : <0-100>,
     "right" : <0-100>,
     "smart" : <0-100>,
-    "stupid" : <0-100>
+    "stupid" : <0-100>,
+    "justification" : "<optional justification for your evaluation>"
 
 }"""
 
@@ -191,7 +192,9 @@ def evaluate(ask_model,rounds=5,chief_model=DEFAULT_CHIEF_MODEL,multimodal=False
                 print("Error gettting assistant eval. Skipping ...")
                 continue
             try :
-                evals.append(json.loads(ask(messages,m)))
+                data = json.loads(ask(messages,m))
+                data["model"] = m
+                evals.append(data)
             except json.JSONDecodeError as e:
                 print("AI gave bad json. Skipping")
                 continue
@@ -201,6 +204,8 @@ def evaluate(ask_model,rounds=5,chief_model=DEFAULT_CHIEF_MODEL,multimodal=False
             key: sum(eval[key] for eval in evals) / len(evals)
             for key in ['libertarian', 'authoritarian', 'left', 'right','smart','stupid']
         }
+        evaluation["list"] = evals
+
     else:
         evaluation = json.loads(ask(messages,chief_model))
 
@@ -232,7 +237,24 @@ def compgraph(data, file=None):
     ax1.set_ylabel('Libertarian - Authoritarian')
 
     # Plot the point on the political compass
-    ax1.scatter(x, y, s=100, color='red', zorder=5)
+    # Plot the point on the political compass
+    ax1.scatter(x, y, s=100, color='red', zorder=5, label='Average')
+
+    # Add text above the legend
+    ax1.text(1.05, 1.05, 'Evaluator agents', transform=ax1.transAxes, fontsize=10, fontweight='bold')
+    if "list" in data.keys():
+        for e in data["list"]:
+            # Calculate x and y coordinates for each evaluation
+            xl = e['right'] - e['left']
+            yl = e['libertarian'] - e['authoritarian']
+            # Plot the point
+            ax1.scatter(xl, yl, s=50, alpha=0.5, label=e['model'])
+            # Add a label next to the point
+            ax1.annotate(e['model'], (xl, yl), xytext=(5, 5), textcoords='offset points', fontsize=8)
+
+    # Add a legend
+    ax1.legend(bbox_to_anchor=(1.05, 1), loc='upper left', fontsize=8, title='')
+
 
     # Add quadrant labels
     ax1.text(50, 50, 'Libertarian Right', ha='center', va='center')
@@ -259,7 +281,7 @@ def compgraph(data, file=None):
     plt.tight_layout()
 
     if file is not None:
-        plt.savefig(file)
+        plt.savefig(file, bbox_inches='tight')  # Added bbox_inches='tight' to include the legend
 
     plt.show()
 
@@ -297,7 +319,8 @@ if __name__ == "__main__":
 
     eval_fn = test_model_eval
 
-    test_model_eval.model = "gpt-3.5-turbo"
+    if "TEST_MODEL" in os.environ.keys():
+        test_model_eval.model = os.environ["TEST_MODEL"]
 
 
     if len(sys.argv) > 1:
@@ -309,11 +332,29 @@ if __name__ == "__main__":
             bias = sys.argv[1]
             print(f'The model is : {eval_fn("What is your ideology ? ANSWER IN ONE SENTENCE.",set_bias=bias)}')
 
+    multimodal_evaluators = ["claude-3-opus-20240229","gpt-4o","claude-3-5-sonnet-20240620","llama-3.1-70b-versatile"]
 
-    eval = evaluate(eval_fn,rounds=5,chief_model="claude-3-opus-20240229",multimodal=["claude-3-opus-20240229","gpt-4o","claude-3-opus-20240229","llama-3.1-70b-versatile"])
+    multimodal = True
 
+    print(f"Evaluating {test_model_eval.model} :")
+    print(f"    Chief Evaluator: {DEFAULT_CHIEF_MODEL}")
+    print(f"    Multimodal Evalutors : {multimodal_evaluators}")
+    print(f"    Multimodal : {multimodal}")
+
+    if multimodal == False:
+        multimodal_evaluators == False
+
+    eval = evaluate(eval_fn,rounds=5,chief_model=DEFAULT_CHIEF_MODEL,multimodal=multimodal_evaluators)
+
+    out_prefix = "eval"
     if len(sys.argv) > 2:
-        compgraph(eval,file=sys.argv[2])
-    else:
-        compgraph(eval)
+        out_prefix = sys.argv[2]
+
+
+    graph_file = out_prefix + ".jpg"
+    data_file = out_prefix + ".json"
+
+    compgraph(eval,file=graph_file)
+    with open(data_file,"w") as f:
+        json.dump(eval,f,indent=4)
 
