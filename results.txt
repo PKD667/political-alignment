@@ -1,0 +1,6 @@
+#                               GPT-2 Base - MarxGPT-2
+Stalin / Marx                   1984        2249
+Stalin / Trotsky                345         3770
+Communism / Authoritarianism    1523        5345
+Fascism / Capitalism            2199        385
+
